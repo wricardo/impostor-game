@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Impostor Game</title>
+  <style>
+    :root {
+      --bg1: #6d5dfc;
+      --bg2: #ff7ab6;
+      --ink: #161625;
+      --muted: #66677a;
+      --card: rgba(255,255,255,.92);
+      --line: rgba(22,22,37,.12);
+      --primary: #4f46e5;
+      --primary2: #7c3aed;
+      --danger: #ef4444;
+      --good: #16a34a;
+      --shadow: 0 24px 80px rgba(31, 23, 80, .28);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.5), transparent 34rem),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      display: grid;
+      place-items: center;
+      padding: 22px;
+    }
+    .app { width: min(100%, 520px); }
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,.55);
+      border-radius: 34px;
+      box-shadow: var(--shadow);
+      padding: 26px;
+      overflow: hidden;
+    }
+    .hero { text-align: center; padding: 16px 0 8px; }
+    .logo {
+      width: 88px; height: 88px; margin: 0 auto 12px;
+      display: grid; place-items: center;
+      border-radius: 28px;
+      background: linear-gradient(135deg, #111827, #4f46e5);
+      color: white; font-size: 44px;
+      box-shadow: 0 18px 34px rgba(79,70,229,.35);
+    }
+    h1 { margin: 6px 0 6px; font-size: clamp(2.2rem, 9vw, 4rem); line-height: .92; letter-spacing: -0.07em; }
+    h2 { margin: 0 0 10px; font-size: clamp(2rem, 8vw, 3.3rem); line-height: .98; letter-spacing: -0.055em; }
+    p { color: var(--muted); font-size: 1.08rem; line-height: 1.45; margin: 8px 0 18px; }
+    .big-word {
+      font-size: clamp(3rem, 15vw, 5.8rem);
+      line-height: .95;
+      letter-spacing: -0.08em;
+      font-weight: 950;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .impostor { color: var(--danger); text-shadow: 0 8px 22px rgba(239,68,68,.18); }
+    .room-code {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 13px 18px;
+      border-radius: 18px;
+      font-size: 2.2rem;
+      font-weight: 950;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      background: #111827;
+      color: white;
+    }
+    .stack { display: grid; gap: 14px; }
+    .row { display: flex; gap: 12px; align-items: center; }
+    .row > * { flex: 1; }
+    button, input, select {
+      width: 100%;
+      min-height: 58px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      font-size: 1.08rem;
+      font-weight: 800;
+      padding: 0 18px;
+      outline: none;
+    }
+    input, select { background: white; color: var(--ink); }
+    input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79,70,229,.14); }
+    button {
+      border: 0;
+      color: white;
+      background: linear-gradient(135deg, var(--primary), var(--primary2));
+      box-shadow: 0 14px 24px rgba(79,70,229,.24);
+      cursor: pointer;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+    button:active { transform: translateY(1px) scale(.99); }
+    button.secondary { color: var(--ink); background: white; border: 1px solid var(--line); box-shadow: none; }
+    button.ghost { color: var(--muted); background: transparent; box-shadow: none; }
+    button.danger { background: linear-gradient(135deg, #ef4444, #f97316); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.75);
+      border-radius: 999px;
+      padding: 9px 13px;
+      font-weight: 850;
+      color: var(--muted);
+    }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .players { display: grid; gap: 10px; margin: 16px 0; }
+    .player {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,.68);
+      font-weight: 900;
+    }
+    .avatar {
+      width: 42px; height: 42px; border-radius: 14px;
+      display: inline-grid; place-items: center;
+      color: white; background: linear-gradient(135deg, #06b6d4, #4f46e5);
+      font-weight: 950; margin-right: 10px;
+    }
+    .player-left { display: flex; align-items: center; min-width: 0; }
+    .badge { font-size: .78rem; padding: 5px 8px; border-radius: 999px; background: #ede9fe; color: #5b21b6; font-weight: 950; }
+    .muted { color: var(--muted); }
+    .center { text-align: center; }
+    .divider { height: 1px; background: var(--line); margin: 18px 0; }
+    .toast, .error {
+      position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+      width: min(calc(100% - 32px), 480px);
+      padding: 14px 16px;
+      border-radius: 18px;
+      color: white;
+      font-weight: 850;
+      box-shadow: 0 18px 50px rgba(0,0,0,.22);
+      z-index: 10;
+    }
+    .toast { background: #111827; }
+    .error { background: var(--danger); }
+    .hidden { display: none !important; }
+    .vote-grid { display: grid; gap: 10px; }
+    .vote-grid button { background: white; color: var(--ink); border: 1px solid var(--line); box-shadow: none; justify-content: flex-start; }
+    .result-banner { border-radius: 24px; padding: 18px; text-align: center; background: #ecfdf5; color: #065f46; font-weight: 950; font-size: 1.5rem; }
+    .result-banner.bad { background: #fff1f2; color: #be123c; }
+    .small { font-size: .96rem; }
+    .preview-bar {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      width: min(calc(100% - 24px), 720px);
+      z-index: 20;
+      display: flex; gap: 10px; align-items: center;
+      padding: 10px;
+      border-radius: 18px;
+      background: rgba(17,24,39,.92);
+      color: white;
+      box-shadow: 0 18px 50px rgba(0,0,0,.24);
+    }
+    .preview-bar label { font-weight: 950; white-space: nowrap; }
+    .preview-bar select { min-height: 44px; border-radius: 12px; font-size: .95rem; }
+    body.preview { padding-top: 84px; }
+    @media (max-width: 430px) { .card { padding: 20px; border-radius: 28px; } .row { flex-direction: column; } .preview-bar { align-items: stretch; flex-direction: column; } body.preview { padding-top: 132px; } }
+  </style>
+</head>
+<body>
+  <div id="previewBar" class="preview-bar hidden"></div>
+  <main class="app">
+    <section class="card" id="screen"></section>
+  </main>
+  <div id="notice" class="hidden"></div>
+
+<script>
+const $screen = document.getElementById('screen');
+const $notice = document.getElementById('notice');
+let ws;
+let state = null;
+let mode = 'home';
+let savedName = localStorage.getItem('impostor:name') || '';
+const isPreview = new URLSearchParams(location.search).has('preview');
+const $previewBar = document.getElementById('previewBar');
+
+if (isPreview) {
+  document.body.classList.add('preview');
+  renderPreviewToolbar('home');
+  renderHome();
+} else {
+  connect();
+  renderHome();
+}
+
+const previewPlayers = [
+  { id: 'p1', name: 'Ana', host: true, ready: true, voted: true, online: true },
+  { id: 'p2', name: 'Bob', host: false, ready: true, voted: true, online: true },
+  { id: 'p3', name: 'Mia', host: false, ready: false, voted: false, online: true },
+  { id: 'p4', name: 'Leo', host: false, ready: false, voted: false, online: true }
+];
+const previewCategories = ['Random', 'Food', 'Animals', 'Places', 'Movies', 'Objects', 'Sports', 'School'];
+const previewStates = {
+  home: null,
+  create: 'create',
+  join: 'join',
+  lobbyHost: makePreviewState({ phase: 'lobby', isHost: true, players: previewPlayers.map(p => ({...p, ready:false, voted:false})) }),
+  lobbyPlayer: makePreviewState({ phase: 'lobby', isHost: false, playerId: 'p2', players: previewPlayers.map(p => ({...p, ready:false, voted:false})) }),
+  roleWord: makePreviewState({ phase: 'role', secretWord: 'pizza', isImpostor: false, players: previewPlayers }),
+  roleImpostor: makePreviewState({ phase: 'role', playerId: 'p3', secretWord: '', isImpostor: true, players: previewPlayers }),
+  turnMine: makePreviewState({ phase: 'turns', currentTurnId: 'p1', secretWord: 'pizza', isImpostor: false, players: previewPlayers }),
+  turnWaiting: makePreviewState({ phase: 'turns', currentTurnId: 'p2', secretWord: 'pizza', isImpostor: false, players: previewPlayers }),
+  discussion: makePreviewState({ phase: 'discussion', players: previewPlayers }),
+  votingOpen: makePreviewState({ phase: 'voting', players: previewPlayers.map(p => ({...p, voted:false})) }),
+  votingDone: makePreviewState({ phase: 'voting', players: previewPlayers }),
+  resultsPlayers: makePreviewState({ phase: 'results', playersWin: true, roundNumber: 2, roundLimit: 3 }),
+  resultsImpostor: makePreviewState({ phase: 'results', playersWin: false, roundNumber: 3, roundLimit: 3 })
+};
+const previewLabels = {
+  home: 'Home', create: 'Create Room', join: 'Join Room', lobbyHost: 'Lobby · Host', lobbyPlayer: 'Lobby · Player',
+  roleWord: 'Role · Word', roleImpostor: 'Role · Impostor', turnMine: 'Turn · My Turn', turnWaiting: 'Turn · Waiting',
+  discussion: 'Discussion', votingOpen: 'Voting · Open', votingDone: 'Voting · Voted', resultsPlayers: 'Results · Players Win', resultsImpostor: 'Results · Impostor Wins'
+};
+
+function makePreviewState(overrides = {}) {
+  return {
+    type: 'state', toast: '', playerId: 'p1', roomCode: 'k3p', phase: 'lobby', category: 'Food', categories: previewCategories,
+    roundLimit: 3, roundNumber: overrides.phase === 'lobby' ? 0 : 1, players: previewPlayers, isHost: true,
+    secretWord: 'pizza', isImpostor: false, currentTurnId: 'p1', turnIndex: 0, impostorName: 'Mia', resultWord: 'pizza',
+    playersWin: true,
+    voteSummary: [
+      { voter: 'Ana', target: 'Mia' }, { voter: 'Bob', target: 'Mia' }, { voter: 'Mia', target: 'Ana' }, { voter: 'Leo', target: 'Mia' }
+    ],
+    ...overrides
+  };
+}
+
+function renderPreviewToolbar(selected) {
+  $previewBar.classList.remove('hidden');
+  $previewBar.innerHTML = `
+    <label>Preview</label>
+    <select onchange="setPreviewState(this.value)">
+      ${Object.keys(previewLabels).map(k => `<option value="${k}" ${k === selected ? 'selected' : ''}>${previewLabels[k]}</option>`).join('')}
+    </select>
+    <button style="min-height:44px;border-radius:12px;font-size:.95rem;box-shadow:none;" onclick="location.href='/'">Exit</button>
+  `;
+}
+
+function setPreviewState(key) {
+  renderPreviewToolbar(key);
+  if (key === 'home') return renderHome();
+  if (key === 'create') return renderCreate();
+  if (key === 'join') return renderJoin();
+  state = structuredClone(previewStates[key]);
+  renderState();
+}
+
+function previewSend(type, data = {}) {
+  if (!state) return flash('Preview mode: this button would talk to the server.', 'toast');
+  if (type === 'setCategory') {
+    state.category = data.category;
+    renderState();
+    return;
+  }
+  if (type === 'setRounds') {
+    state.roundLimit = data.rounds;
+    renderState();
+    return;
+  }
+  flash(`Preview mode: ${type}`, 'toast');
+}
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onmessage = (event) => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === 'state') {
+      state = msg;
+      mode = 'game';
+      if (msg.toast) flash(msg.toast, 'toast');
+      renderState();
+    }
+    if (msg.type === 'error') flash(msg.message, 'error');
+  };
+  ws.onclose = () => {
+    flash('Connection lost. Reconnecting...', 'error');
+    setTimeout(connect, 900);
+  };
+}
+
+function send(type, data = {}) {
+  if (isPreview) return previewSend(type, data);
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    flash('Still connecting. Try again in a second.', 'error');
+    return;
+  }
+  ws.send(JSON.stringify({ type, ...data }));
+}
+
+function html(strings, ...values) {
+  return strings.map((s, i) => s + (values[i] ?? '')).join('');
+}
+
+function setScreen(markup) {
+  $screen.innerHTML = markup;
+}
+
+function renderHome() {
+  mode = 'home';
+  setScreen(html`
+    <div class="hero">
+      <div class="logo">🕵️</div>
+      <h1>Impostor Game</h1>
+      <p>A party game where everyone gets the word... except one sneaky impostor.</p>
+    </div>
+    <div class="stack">
+      <button onclick="renderCreate()">Create Room</button>
+      <button class="secondary" onclick="renderJoin()">Join Room</button>
+    </div>
+    <div class="divider"></div>
+    <p class="small center">No accounts. Use one phone per player. Keep your screen secret!</p>
+  `);
+}
+
+function renderCreate() {
+  setScreen(html`
+    <div class="topbar"><button class="ghost" onclick="renderHome()">← Back</button></div>
+    <h2>Create Room</h2>
+    <p>Enter your name. You will be the host and can start the game.</p>
+    <div class="stack">
+      <input id="name" maxlength="20" placeholder="Your name" value="${escapeHtml(savedName)}" autofocus />
+      <button onclick="createRoom()">Create Room</button>
+    </div>
+  `);
+}
+
+function renderJoin() {
+  setScreen(html`
+    <div class="topbar"><button class="ghost" onclick="renderHome()">← Back</button></div>
+    <h2>Join Room</h2>
+    <p>Ask the host for the 3-character room code.</p>
+    <div class="stack">
+      <input id="room" maxlength="3" placeholder="Room code, like k3p" style="text-transform:uppercase" autofocus />
+      <input id="name" maxlength="20" placeholder="Your name" value="${escapeHtml(savedName)}" />
+      <button onclick="joinRoom()">Join</button>
+    </div>
+  `);
+}
+
+function createRoom() {
+  const name = val('name');
+  if (!name) return flash('Please enter your name.', 'error');
+  savedName = name; localStorage.setItem('impostor:name', name);
+  send('createRoom', { name });
+}
+
+function joinRoom() {
+  const name = val('name');
+  const roomCode = val('room').toLowerCase();
+  if (roomCode.length !== 3) return flash('Room code must be 3 characters.', 'error');
+  if (!name) return flash('Please enter your name.', 'error');
+  savedName = name; localStorage.setItem('impostor:name', name);
+  send('joinRoom', { roomCode, name });
+}
+
+function renderState() {
+  if (!state) return renderHome();
+  if (state.phase === 'lobby') return renderLobby();
+  if (state.phase === 'role') return renderRole();
+  if (state.phase === 'turns') return renderTurns();
+  if (state.phase === 'discussion') return renderDiscussion();
+  if (state.phase === 'voting') return renderVoting();
+  if (state.phase === 'results') return renderResults();
+}
+
+function chrome(title, body) {
+  return html`
+    <div class="topbar">
+      <span class="pill">Room <b>${state.roomCode.toUpperCase()}</b></span>
+      <span class="pill">${escapeHtml(state.category)}${state.roundNumber ? ` · Round ${state.roundNumber}/${state.roundLimit}` : ` · ${state.roundLimit} round${state.roundLimit === 1 ? '' : 's'}`}</span>
+    </div>
+    ${title ? `<h2>${title}</h2>` : ''}
+    ${body}
+  `;
+}
+
+function renderLobby() {
+  const canStart = state.players.length >= 3;
+  setScreen(chrome('Lobby', html`
+    <div class="center">
+      <p>Tell friends to join with this code:</p>
+      <div class="room-code">${state.roomCode}</div>
+    </div>
+    <div class="divider"></div>
+    ${state.isHost ? html`
+      <label class="small muted"><b>Category</b></label>
+      <select onchange="send('setCategory', {category: this.value})">
+        ${state.categories.map(c => `<option ${c === state.category ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
+      </select>
+      <label class="small muted"><b>Rounds</b></label>
+      <select onchange="send('setRounds', {rounds: Number(this.value)})">
+        ${[1,2,3,4,5].map(n => `<option value="${n}" ${n === state.roundLimit ? 'selected' : ''}>${n} round${n === 1 ? '' : 's'}</option>`).join('')}
+      </select>` : ''}
+    <div class="players">${playersList()}</div>
+    ${!canStart ? '<p class="center"><b>Need at least 3 players to start.</b></p>' : ''}
+    <div class="stack">
+      ${state.isHost ? `<button ${!canStart ? 'disabled' : ''} onclick="send('startGame')">Start Game</button>` : '<p class="center"><b>Waiting for the host to start...</b></p>'}
+      <button class="secondary" onclick="location.reload()">Leave Room</button>
+    </div>
+  `));
+}
+
+function renderRole() {
+  const me = state.players.find(p => p.id === state.playerId);
+  const ready = me && me.ready;
+  setScreen(chrome('', html`
+    <div class="center">
+      <p>Hide your phone. This is secret.</p>
+      ${state.isImpostor ? html`<p>You are the</p><div class="big-word impostor">IMPOSTOR</div><p>Listen carefully and bluff!</p>` : html`<p>Your word is</p><div class="big-word">${escapeHtml(state.secretWord)}</div><p>Say related words, but don't be too obvious.</p>`}
+    </div>
+    <button ${ready ? 'disabled' : ''} onclick="send('ready')">${ready ? 'Waiting for others...' : "I'm ready"}</button>
+    <div class="players">${playersList(true)}</div>
+  `));
+}
+
+function renderTurns() {
+  const current = state.players.find(p => p.id === state.currentTurnId);
+  const myTurn = state.currentTurnId === state.playerId;
+  setScreen(chrome(`${escapeHtml(current?.name || 'Someone')}’s Turn`, html`
+    <div class="center">
+      <p>${myTurn ? "It's your turn. Say one word out loud." : `Wait for ${escapeHtml(current?.name || 'them')} to say one word.`}</p>
+      <div class="big-word">${myTurn ? '🎤' : '👂'}</div>
+    </div>
+    <details style="margin: 0 0 14px;">
+      <summary style="cursor:pointer; font-weight:950; color:var(--muted); padding:14px; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.65);">Peek at my secret</summary>
+      <div style="margin-top:10px; padding:18px; border-radius:20px; background:#111827; color:white; text-align:center;">
+        <div class="small" style="opacity:.72; font-weight:800;">Keep this hidden from other players</div>
+        <div style="font-size:2.4rem; font-weight:950; letter-spacing:-.05em; margin-top:6px;">${state.isImpostor ? 'IMPOSTOR' : escapeHtml(state.secretWord)}</div>
+      </div>
+    </details>
+    ${myTurn ? '<button onclick="send(\'doneTurn\')">Done</button>' : '<button disabled>Waiting...</button>'}
+    <div class="divider"></div>
+    <p><b>Turn order</b></p>
+    <div class="players">${playersList(false, state.currentTurnId)}</div>
+  `));
+}
+
+function renderDiscussion() {
+  setScreen(chrome('Discuss!', html`
+    <div class="center">
+      <div class="big-word">💬</div>
+      <p>Talk together and decide who you think the impostor is.</p>
+    </div>
+    ${state.isHost ? '<button onclick="send(\'startVoting\')">Start Voting</button>' : '<button disabled>Waiting for host to start voting...</button>'}
+  `));
+}
+
+function renderVoting() {
+  const me = state.players.find(p => p.id === state.playerId);
+  setScreen(chrome('Who is the impostor?', html`
+    ${me?.voted ? html`<div class="center"><div class="big-word">✅</div><p><b>Vote locked in.</b><br/>Waiting for everyone else...</p></div>` : html`
+      <p>Tap the player you think is lying.</p>
+      <div class="vote-grid">
+        ${state.players.map(p => `<button onclick="send('vote', {targetId: '${p.id}'})">${escapeHtml(p.name)} ${p.id === state.playerId ? '(me)' : ''}</button>`).join('')}
+      </div>`}
+    <div class="players">${playersList(true)}</div>
+  `));
+}
+
+function renderResults() {
+  setScreen(chrome('Results', html`
+    <div class="result-banner ${state.playersWin ? '' : 'bad'}">${state.playersWin ? 'Players win!' : 'Impostor wins!'}</div>
+    <div class="center">
+      <p>The impostor was</p>
+      <div class="big-word impostor">${escapeHtml(state.impostorName)}</div>
+      <p>The secret word was</p>
+      <div class="big-word">${escapeHtml(state.resultWord)}</div>
+    </div>
+    <div class="divider"></div>
+    <p><b>Votes</b></p>
+    <div class="players">
+      ${state.voteSummary.map(v => `<div class="player"><span>${escapeHtml(v.voter)}</span><span class="muted">voted ${escapeHtml(v.target)}</span></div>`).join('')}
+    </div>
+    <div class="stack">
+      ${state.isHost ? `<button onclick="send('playAgain')">${state.roundNumber < state.roundLimit ? 'Next Round' : 'Finish Game'}</button><button class="secondary" onclick="send('backLobby')">Back to Lobby</button>` : '<button disabled>Waiting for host...</button>'}
+    </div>
+  `));
+}
+
+function playersList(showStatus = false, activeId = '') {
+  return state.players.map(p => html`
+    <div class="player" style="${p.id === activeId ? 'border-color:#4f46e5; box-shadow:0 0 0 4px rgba(79,70,229,.12)' : ''}">
+      <div class="player-left"><span class="avatar">${escapeHtml(p.name[0] || '?').toUpperCase()}</span><span>${escapeHtml(p.name)}</span></div>
+      <div class="row" style="flex:0; gap:6px">
+        ${p.host ? '<span class="badge">HOST</span>' : ''}
+        ${showStatus && p.ready ? '<span class="badge">READY</span>' : ''}
+        ${showStatus && p.voted ? '<span class="badge">VOTED</span>' : ''}
+        ${!p.online ? '<span class="badge">OFFLINE</span>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+function val(id) { return document.getElementById(id)?.value.trim() || ''; }
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function flash(message, kind) {
+  $notice.textContent = message;
+  $notice.className = kind;
+  clearTimeout(flash.timer);
+  flash.timer = setTimeout(() => $notice.className = 'hidden', 2600);
+}
+</script>
+</body>
+</html>
