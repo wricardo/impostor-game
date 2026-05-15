@@ -182,6 +182,8 @@ let mode = 'home';
 let savedName = localStorage.getItem('impostor:name') || '';
 const isPreview = new URLSearchParams(location.search).has('preview');
 const $previewBar = document.getElementById('previewBar');
+const initialRoute = readRoute();
+if (initialRoute.name) savedName = initialRoute.name;
 
 if (isPreview) {
   document.body.classList.add('preview');
@@ -189,7 +191,15 @@ if (isPreview) {
   renderHome();
 } else {
   connect();
-  renderHome();
+  if (initialRoute.roomCode && initialRoute.playerId) {
+    renderReconnect();
+  } else if (initialRoute.screen === 'create') {
+    renderCreate();
+  } else if (initialRoute.screen === 'join') {
+    renderJoin();
+  } else {
+    renderHome();
+  }
 }
 
 const previewPlayers = [
@@ -272,11 +282,18 @@ function previewSend(type, data = {}) {
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => {
+    const route = readRoute();
+    if (route.roomCode && route.playerId) {
+      send('resume', { roomCode: route.roomCode, playerId: route.playerId });
+    }
+  };
   ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
     if (msg.type === 'state') {
       state = msg;
       mode = 'game';
+      rememberStateInUrl(msg);
       if (msg.toast) flash(msg.toast, 'toast');
       renderState();
     }
@@ -305,8 +322,60 @@ function setScreen(markup) {
   $screen.innerHTML = markup;
 }
 
+function readRoute() {
+  const params = new URLSearchParams(location.search);
+  return {
+    screen: params.get('screen') || '',
+    roomCode: (params.get('room') || '').toLowerCase(),
+    playerId: params.get('player') || '',
+    name: params.get('name') || savedName || ''
+  };
+}
+
+function setRoute({ screen = '', roomCode = '', playerId = '', name = '' }) {
+  if (isPreview) return;
+  const url = new URL(location.href);
+  url.searchParams.delete('screen');
+  url.searchParams.delete('room');
+  url.searchParams.delete('player');
+  url.searchParams.delete('name');
+  if (screen) url.searchParams.set('screen', screen);
+  if (roomCode) url.searchParams.set('room', roomCode.toLowerCase());
+  if (playerId) url.searchParams.set('player', playerId);
+  if (name) url.searchParams.set('name', name);
+  history.replaceState(null, '', url.pathname + url.search + url.hash);
+}
+
+function rememberStateInUrl(msg) {
+  const me = msg.players?.find(p => p.id === msg.playerId);
+  const name = me?.name || savedName;
+  if (name) {
+    savedName = name;
+    localStorage.setItem('impostor:name', name);
+  }
+  setRoute({ roomCode: msg.roomCode, playerId: msg.playerId, name });
+}
+
+function renderReconnect() {
+  const route = readRoute();
+  setScreen(html`
+    <div class="hero">
+      <div class="logo">🕵️</div>
+      <h1>Rejoining...</h1>
+      <p>Restoring your seat in room <b>${escapeHtml(route.roomCode.toUpperCase())}</b>.</p>
+    </div>
+    <button class="secondary" onclick="leaveRoom()">Start Over</button>
+  `);
+}
+
+function leaveRoom() {
+  setRoute({});
+  location.href = location.pathname;
+}
+
 function renderHome() {
   mode = 'home';
+  setRoute({});
   setScreen(html`
     <div class="hero">
       <div class="logo">🕵️</div>
@@ -323,6 +392,7 @@ function renderHome() {
 }
 
 function renderCreate() {
+  setRoute({ screen: 'create' });
   setScreen(html`
     <div class="topbar"><button class="ghost" onclick="renderHome()">← Back</button></div>
     <h2>Create Room</h2>
@@ -335,12 +405,14 @@ function renderCreate() {
 }
 
 function renderJoin() {
+  const route = readRoute();
+  setRoute({ screen: 'join', roomCode: route.roomCode });
   setScreen(html`
     <div class="topbar"><button class="ghost" onclick="renderHome()">← Back</button></div>
     <h2>Join Room</h2>
     <p>Ask the host for the 3-character room code.</p>
     <div class="stack">
-      <input id="room" maxlength="3" placeholder="Room code, like k3p" style="text-transform:uppercase" autofocus />
+      <input id="room" maxlength="3" placeholder="Room code, like k3p" value="${escapeHtml(route.roomCode)}" style="text-transform:uppercase" autofocus />
       <input id="name" maxlength="20" placeholder="Your name" value="${escapeHtml(savedName)}" />
       <button onclick="joinRoom()">Join</button>
     </div>
@@ -351,6 +423,7 @@ function createRoom() {
   const name = val('name');
   if (!name) return flash('Please enter your name.', 'error');
   savedName = name; localStorage.setItem('impostor:name', name);
+  setRoute({ screen: 'create', name });
   send('createRoom', { name });
 }
 
@@ -360,6 +433,7 @@ function joinRoom() {
   if (roomCode.length !== 3) return flash('Room code must be 3 characters.', 'error');
   if (!name) return flash('Please enter your name.', 'error');
   savedName = name; localStorage.setItem('impostor:name', name);
+  setRoute({ screen: 'join', roomCode, name });
   send('joinRoom', { roomCode, name });
 }
 
@@ -405,7 +479,7 @@ function renderLobby() {
     ${!canStart ? '<p class="center"><b>Need at least 3 players to start.</b></p>' : ''}
     <div class="stack">
       ${state.isHost ? `<button ${!canStart ? 'disabled' : ''} onclick="send('startGame')">Start Game</button>` : '<p class="center"><b>Waiting for the host to start...</b></p>'}
-      <button class="secondary" onclick="location.reload()">Leave Room</button>
+      <button class="secondary" onclick="leaveRoom()">Leave Room</button>
     </div>
   `));
 }

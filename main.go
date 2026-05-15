@@ -73,6 +73,7 @@ type Message struct {
 	Category string `json:"category,omitempty"`
 	Rounds   int    `json:"rounds,omitempty"`
 	TargetID string `json:"targetId,omitempty"`
+	PlayerID string `json:"playerId,omitempty"`
 }
 
 var words = map[string][]string{
@@ -136,6 +137,24 @@ func (s *Server) handleMessage(c *Client, msg Message) {
 	defer s.mu.Unlock()
 
 	switch msg.Type {
+	case "resume":
+		code := strings.ToLower(strings.TrimSpace(msg.RoomCode))
+		playerID := strings.TrimSpace(msg.PlayerID)
+		room := s.rooms[code]
+		if room == nil {
+			c.sendError("Room not found. Please create or join a room.")
+			return
+		}
+		p := room.Players[playerID]
+		if p == nil {
+			c.sendError("Could not restore your seat. Please join again.")
+			return
+		}
+		c.id = playerID
+		c.room = room
+		p.Online = true
+		s.broadcast(room, p.Name+" reconnected.")
+
 	case "createRoom":
 		name := cleanName(msg.Name)
 		if name == "" {
@@ -311,10 +330,19 @@ func (s *Server) disconnect(c *Client) {
 	defer s.mu.Unlock()
 	delete(s.clients, c)
 	if c.room != nil {
-		if p := c.room.Players[c.id]; p != nil {
-			p.Online = false
+		stillConnected := false
+		for other := range s.clients {
+			if other != c && other.room == c.room && other.id == c.id {
+				stillConnected = true
+				break
+			}
 		}
-		s.broadcast(c.room, "")
+		if !stillConnected {
+			if p := c.room.Players[c.id]; p != nil {
+				p.Online = false
+			}
+			s.broadcast(c.room, "")
+		}
 	}
 	c.conn.Close()
 }
