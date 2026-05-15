@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -100,8 +101,12 @@ func main() {
 	})
 	http.HandleFunc("/ws", s.handleWS)
 
-	log.Println("Impostor Game running at http://localhost:8000")
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000"
+	}
+	log.Printf("Impostor Game running at http://localhost:%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
