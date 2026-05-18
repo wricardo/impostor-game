@@ -381,7 +381,8 @@ function leaveRoom() {
 
 function renderHome() {
   mode = 'home';
-  setRoute({});
+  const route = readRoute();
+  setRoute({ roomCode: route.roomCode });
   setScreen(html`
     <div class="hero">
       <div class="logo">🕵️</div>

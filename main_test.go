@@ -15,6 +15,9 @@ func TestReadRouteSupportsCodeQueryParam(t *testing.T) {
 	if !strings.Contains(js, "params.get('room') || params.get('code')") {
 		t.Fatalf("readRoute should use the code query param as a fallback for room prefill")
 	}
+	if !strings.Contains(js, "setRoute({ roomCode: route.roomCode })") {
+		t.Fatalf("home screen should preserve room/code route so Join Room can prefill it")
+	}
 }
 
 func TestStartRoundRandomizesStartingPlayer(t *testing.T) {
