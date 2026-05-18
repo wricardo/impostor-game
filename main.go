@@ -300,7 +300,7 @@ func (s *Server) handleMessage(c *Client, msg Message) {
 }
 
 func (s *Server) startRound(room *Room) {
-	room.Phase = PhaseRole
+	room.Phase = PhaseTurns
 	room.Word = randomWord(room.Category)
 	room.ImpostorID = room.Order[randomInt(len(room.Order))]
 	room.TurnIndex = 0

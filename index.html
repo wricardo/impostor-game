@@ -502,11 +502,11 @@ function renderTurns() {
   const myTurn = state.currentTurnId === state.playerId;
   setScreen(chrome(`${escapeHtml(current?.name || 'Someone')}’s Turn`, html`
     <div class="center">
-      <p>${myTurn ? "It's your turn. Say one word out loud." : `Wait for ${escapeHtml(current?.name || 'them')} to say one word.`}</p>
+      <p>${myTurn ? "It's your turn. Peek at your secret, then say one word out loud." : `Peek at your secret, then wait for ${escapeHtml(current?.name || 'them')} to say one word.`}</p>
       <div class="big-word">${myTurn ? '🎤' : '👂'}</div>
     </div>
     <details style="margin: 0 0 14px;">
-      <summary style="cursor:pointer; font-weight:950; color:var(--muted); padding:14px; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.65);">Peek at my secret</summary>
+      <summary style="cursor:pointer; font-weight:950; color:var(--muted); padding:14px; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.65);">Peek at my secret before speaking</summary>
       <div style="margin-top:10px; padding:18px; border-radius:20px; background:#111827; color:white; text-align:center;">
         <div class="small" style="opacity:.72; font-weight:800;">Keep this hidden from other players</div>
         <div style="font-size:2.4rem; font-weight:950; letter-spacing:-.05em; margin-top:6px;">${state.isImpostor ? 'IMPOSTOR' : escapeHtml(state.secretWord)}</div>
