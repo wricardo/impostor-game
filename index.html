@@ -297,6 +297,12 @@ function connect() {
       if (msg.toast) flash(msg.toast, 'toast');
       renderState();
     }
+    if (msg.type === 'removed') {
+      state = null;
+      setRoute({});
+      renderHome();
+      flash(msg.message || 'You were removed from the room.', 'error');
+    }
     if (msg.type === 'error') flash(msg.message, 'error');
   };
   ws.onclose = () => {
@@ -326,7 +332,7 @@ function readRoute() {
   const params = new URLSearchParams(location.search);
   return {
     screen: params.get('screen') || '',
-    roomCode: (params.get('room') || '').toLowerCase(),
+    roomCode: (params.get('room') || params.get('code') || '').toLowerCase(),
     playerId: params.get('player') || '',
     name: params.get('name') || savedName || ''
   };
@@ -475,7 +481,7 @@ function renderLobby() {
       <select onchange="send('setRounds', {rounds: Number(this.value)})">
         ${[1,2,3,4,5].map(n => `<option value="${n}" ${n === state.roundLimit ? 'selected' : ''}>${n} round${n === 1 ? '' : 's'}</option>`).join('')}
       </select>` : ''}
-    <div class="players">${playersList()}</div>
+    <div class="players">${playersList(false, '', state.isHost)}</div>
     ${!canStart ? '<p class="center"><b>Need at least 3 players to start.</b></p>' : ''}
     <div class="stack">
       ${state.isHost ? `<button ${!canStart ? 'disabled' : ''} onclick="send('startGame')">Start Game</button>` : '<p class="center"><b>Waiting for the host to start...</b></p>'}
@@ -561,7 +567,7 @@ function renderResults() {
   `));
 }
 
-function playersList(showStatus = false, activeId = '') {
+function playersList(showStatus = false, activeId = '', allowRemove = false) {
   return state.players.map(p => html`
     <div class="player" style="${p.id === activeId ? 'border-color:#4f46e5; box-shadow:0 0 0 4px rgba(79,70,229,.12)' : ''}">
       <div class="player-left"><span class="avatar">${escapeHtml(p.name[0] || '?').toUpperCase()}</span><span>${escapeHtml(p.name)}</span></div>
@@ -570,8 +576,15 @@ function playersList(showStatus = false, activeId = '') {
         ${showStatus && p.ready ? '<span class="badge">READY</span>' : ''}
         ${showStatus && p.voted ? '<span class="badge">VOTED</span>' : ''}
         ${!p.online ? '<span class="badge">OFFLINE</span>' : ''}
+        ${allowRemove && !p.host && p.id !== state.playerId ? `<button class="danger" style="min-height:36px;border-radius:12px;padding:0 10px;font-size:.82rem;box-shadow:none;" onclick="removePlayer('${p.id}')">Remove</button>` : ''}
       </div>
     </div>`).join('');
+}
+
+function removePlayer(playerId) {
+  const player = state.players.find(p => p.id === playerId);
+  if (!confirm(`Remove ${player?.name || 'this player'} from the room?`)) return;
+  send('removePlayer', { targetId: playerId });
 }
 
 function val(id) { return document.getElementById(id)?.value.trim() || ''; }

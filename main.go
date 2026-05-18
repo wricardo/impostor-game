@@ -89,6 +89,8 @@ var words = map[string][]string{
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 
+var chooseRandomInt = randomInt
+
 func main() {
 	s := &Server{rooms: map[string]*Room{}, clients: map[*Client]bool{}}
 
@@ -215,6 +217,25 @@ func (s *Server) handleMessage(c *Client, msg Message) {
 			s.broadcast(c.room, "Rounds changed.")
 		}
 
+	case "removePlayer":
+		if !s.isHost(c) || c.room.Phase != PhaseLobby || msg.TargetID == c.id {
+			return
+		}
+		room := c.room
+		p := room.Players[msg.TargetID]
+		if p == nil || p.Host {
+			return
+		}
+		delete(room.Players, msg.TargetID)
+		room.Order = removeID(room.Order, msg.TargetID)
+		for other := range s.clients {
+			if other.room == room && other.id == msg.TargetID {
+				other.room = nil
+				other.send(map[string]any{"type": "removed", "message": "The host removed you from the room."})
+			}
+		}
+		s.broadcast(room, p.Name+" was removed.")
+
 	case "startGame":
 		if !s.isHost(c) || c.room.Phase != PhaseLobby || len(c.room.Players) < 3 {
 			return
@@ -302,7 +323,8 @@ func (s *Server) handleMessage(c *Client, msg Message) {
 func (s *Server) startRound(room *Room) {
 	room.Phase = PhaseTurns
 	room.Word = randomWord(room.Category)
-	room.ImpostorID = room.Order[randomInt(len(room.Order))]
+	rotateStartingPlayer(room, chooseRandomInt(len(room.Order)))
+	room.ImpostorID = room.Order[chooseRandomInt(len(room.Order))]
 	room.TurnIndex = 0
 	room.Votes = map[string]string{}
 	for _, p := range room.Players {
@@ -436,6 +458,25 @@ func playerName(room *Room, id string) string {
 
 func (s *Server) isHost(c *Client) bool {
 	return c.room != nil && c.room.Players[c.id] != nil && c.room.Players[c.id].Host
+}
+
+func rotateStartingPlayer(room *Room, start int) {
+	if len(room.Order) == 0 || start <= 0 || start >= len(room.Order) {
+		return
+	}
+	rotated := append([]string{}, room.Order[start:]...)
+	rotated = append(rotated, room.Order[:start]...)
+	room.Order = rotated
+}
+
+func removeID(ids []string, target string) []string {
+	out := ids[:0]
+	for _, id := range ids {
+		if id != target {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func (s *Server) newRoomCode() string {
