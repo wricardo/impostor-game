@@ -1,44 +1,40 @@
-# CLAUDE.md
+# Agent Instructions
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
-## Commands
+## Quick Reference
 
 ```bash
-go run .          # run server at http://localhost:8000
-go test ./...     # build check (no tests yet)
-go mod tidy       # sync dependencies
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --claim  # Claim work atomically
+bd close <id>         # Complete work
+bd dolt push          # Push beads data to remote
 ```
 
-Preview all UI screens without multiplayer:
+## Non-Interactive Shell Commands
+
+**ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.
+
+Shell commands like `cp`, `mv`, and `rm` may be aliased to include `-i` (interactive) mode on some systems, causing the agent to hang indefinitely waiting for y/n input.
+
+**Use these forms instead:**
+```bash
+# Force overwrite without prompting
+cp -f source dest           # NOT: cp source dest
+mv -f source dest           # NOT: mv source dest
+rm -f file                  # NOT: rm file
+
+# For recursive operations
+rm -rf directory            # NOT: rm -r directory
+cp -rf source dest          # NOT: cp -r source dest
 ```
-http://localhost:8000/?preview=1
-```
 
-## Architecture
-
-Single-file Go server + single-file frontend. No frameworks, no build step.
-
-- `main.go` — entire backend: HTTP server, WebSocket handling, room/game state, all game logic
-- `index.html` — entire frontend: all screens, CSS, JS, WebSocket client; embedded into binary via `//go:embed`
-
-**State model:** `Server` holds a map of `Room`s and connected `Client`s under a single `sync.Mutex`. Every WebSocket message goes through `handleMessage`, which acquires the mutex and mutates room state, then calls `broadcast` to push updated view state to all clients in the room.
-
-**Game phases (in order):** `lobby → role → turns → discussion → voting → results`
-
-Phase transitions:
-- `startGame` → role
-- all players `ready` → turns
-- all turns done → discussion
-- host `startVoting` → voting
-- all votes cast → results
-- host `playAgain` → role (next round) or lobby (rounds exhausted)
-- host `backLobby` → lobby
-
-**View model:** `viewFor` computes a per-client state snapshot on every broadcast. The secret word is stripped for the impostor; the impostor identity is stripped for non-impostors until results phase.
-
-**No persistence** — all state is in-memory. Disconnecting marks a player offline but keeps them in the room. No reconnect support.
-
+**Other commands that may prompt:**
+- `scp` - use `-o BatchMode=yes` for non-interactive
+- `ssh` - use `-o BatchMode=yes` to fail instead of prompting
+- `apt-get` - use `-y` flag
+- `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
