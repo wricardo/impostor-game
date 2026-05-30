@@ -59,7 +59,7 @@ jobs:
             -i ~/.ssh/deploy_key \
             ubuntu@"$EC2_HOST" "
             set -e
-            URL=\"https://github.com/wricardo/impostor-game/releases/download/${TAG}/impostor-game_linux_amd64.tar.gz\"
+            URL=\"https://github.com/wricardo/impostor-game/releases/download/${TAG}/impostor-game_linux_arm64.tar.gz\"
             cd /tmp
             curl -fsSL \"\$URL\" | tar -xz
             sudo systemctl stop impostor-game
