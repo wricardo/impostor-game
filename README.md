@@ -135,12 +135,15 @@ Current categories:
 - Food
 - Animals
 - Places
-- Movies
 - Objects
 - Sports
 - School
+- Nature
+- Jobs
+- Activities
+- Fantasy
 
-Each category uses a simple built-in word list.
+Each real category uses a PG, kid-friendly built-in word list. Choosing Random picks one of the real categories at random for the round.
 
 ### Role Screen
 

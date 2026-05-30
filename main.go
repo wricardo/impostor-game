@@ -77,14 +77,16 @@ type Message struct {
 }
 
 var words = map[string][]string{
-	"Random":  {"pizza", "beach", "dragon", "school", "soccer", "banana", "castle", "music", "robot", "winter"},
-	"Food":    {"pizza", "burger", "taco", "banana", "pasta", "cookie", "sushi", "popcorn", "cheese", "ice cream"},
-	"Animals": {"lion", "penguin", "elephant", "shark", "giraffe", "monkey", "rabbit", "turtle", "dolphin", "zebra"},
-	"Places":  {"beach", "school", "park", "castle", "airport", "forest", "museum", "stadium", "library", "zoo"},
-	"Movies":  {"superhero", "wizard", "alien", "princess", "pirate", "detective", "monster", "robot", "dragon", "spy"},
-	"Objects": {"phone", "chair", "backpack", "lamp", "pencil", "clock", "bicycle", "camera", "blanket", "key"},
-	"Sports":  {"soccer", "baseball", "basketball", "tennis", "swimming", "running", "boxing", "golf", "skating", "volleyball"},
-	"School":  {"teacher", "homework", "pencil", "recess", "math", "book", "desk", "science", "bus", "cafeteria"},
+	"Food":       {"pizza", "burger", "taco", "banana", "pasta", "cookie", "sushi", "popcorn", "cheese", "ice cream", "pancake", "apple", "sandwich", "noodles", "cupcake", "salad", "donut", "fries", "cereal", "watermelon", "waffle", "strawberry", "blueberry", "pineapple", "mango", "pretzel", "bagel", "muffin", "brownie", "nachos", "smoothie", "lemonade", "hot dog", "burrito", "ramen", "meatball", "toast", "yogurt", "avocado", "carrot"},
+	"Animals":    {"lion", "penguin", "elephant", "shark", "giraffe", "monkey", "rabbit", "turtle", "dolphin", "zebra", "tiger", "panda", "koala", "horse", "frog", "owl", "bear", "kangaroo", "whale", "fox", "sloth", "otter", "seal", "parrot", "flamingo", "peacock", "raccoon", "hedgehog", "llama", "camel", "octopus", "seahorse", "butterfly", "ladybug", "bee", "snail", "goat", "sheep", "moose", "cheetah"},
+	"Places":     {"beach", "school", "park", "hotel", "airport", "amusement park", "museum", "stadium", "science center", "zoo", "farm", "ice cream shop", "restaurant", "town square", "hospital", "movie theater", "aquarium", "bakery", "campsite", "theater", "carnival", "circus", "water park", "skate park", "arcade", "treehouse", "planetarium", "harbor", "train station", "fire station", "post office", "grocery store", "bookstore", "garden", "picnic area", "observatory", "lighthouse", "toy store", "orchard", "pet shop"},
+	"Objects":    {"phone", "chair", "rubber duck", "lamp", "toy car", "clock", "bicycle", "camera", "blanket", "key", "umbrella", "toothbrush", "mirror", "balloon", "suitcase", "flashlight", "scissors", "helmet", "spoon", "towel", "kite", "yo-yo", "skateboard", "scooter", "teddy bear", "puzzle", "snow globe", "magnifying glass", "compass", "whistle", "binoculars", "paintbrush", "drum", "guitar", "microphone", "remote", "bookmark", "sticker", "marbles", "water bottle"},
+	"Sports":     {"soccer", "baseball", "basketball", "tennis", "swimming", "running", "boxing", "golf", "skating", "volleyball", "football", "hockey", "gymnastics", "skiing", "surfing", "cycling", "bowling", "karate", "frisbee", "climbing", "badminton", "table tennis", "dodgeball", "kickball", "jump rope", "archery", "canoeing", "kayaking", "snowboarding", "sledding", "rollerblading", "cheerleading", "track", "fencing", "lacrosse", "softball", "rugby", "diving", "sailing", "mini golf"},
+	"School":     {"teacher", "homework", "pencil", "recess", "math", "book", "desk", "science", "bus", "cafeteria", "backpack", "principal", "marker", "notebook", "classroom", "library", "quiz", "art", "music", "playground", "crayon", "glue", "ruler", "eraser", "whiteboard", "locker", "field trip", "spelling", "history", "geography", "reading", "experiment", "calendar", "bell", "folder", "worksheet", "computer", "assembly", "lunchbox", "storytime"},
+	"Nature":     {"rainbow", "river", "mountain", "flower", "tree", "cloud", "ocean", "desert", "volcano", "waterfall", "sunshine", "moon", "stars", "leaf", "cave", "meadow", "thunder", "snow", "island", "forest", "breeze", "raindrop", "seashell", "coral", "sunset", "sunrise", "acorn", "pinecone", "mushroom", "fern", "cactus", "glacier", "lagoon", "pond", "stream", "comet", "meteor", "cliff", "valley", "wildflower"},
+	"Jobs":       {"doctor", "chef", "firefighter", "artist", "pilot", "farmer", "professor", "dentist", "builder", "nurse", "scientist", "baker", "librarian", "police", "mechanic", "musician", "gardener", "coach", "mail carrier", "veterinarian", "astronaut", "park ranger", "zookeeper", "photographer", "author", "illustrator", "dancer", "actor", "engineer", "architect", "plumber", "electrician", "barber", "florist", "translator", "lifeguard", "referee", "bus driver", "tour guide", "meteorologist"},
+	"Activities": {"camping", "painting", "singing", "dancing", "puzzle solving", "fishing", "cooking", "gardening", "hiking", "shopping", "drawing", "baking", "sleeping", "building", "cleaning", "jumping", "fort building", "traveling", "playing", "bubble blowing", "stargazing", "birdwatching", "picnicking", "hopscotch", "skipping", "juggling", "crafting", "collecting", "exploring", "storytelling", "roller skating", "kite flying", "treasure hunting", "puddle jumping", "sandcastle building", "origami", "caroling", "volunteering", "daydreaming", "drumming"},
+	"Fantasy":    {"dragon", "castle", "wizard", "treasure", "unicorn", "knight", "fairy", "giant", "mermaid", "phoenix", "spell", "potion", "crown", "quest", "goblin", "elf", "crystal", "sword", "portal", "kingdom", "griffin", "pegasus", "troll", "sprite", "lantern", "map", "riddle", "enchanted forest", "magic carpet", "wishing well", "royal banquet", "secret door", "hidden cave", "golden apple", "moonstone", "starship", "time machine", "friendly ghost", "talking tree", "rainbow bridge"},
 }
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
@@ -203,7 +205,7 @@ func (s *Server) handleMessage(c *Client, msg Message) {
 		if !s.isHost(c) || c.room.Phase != PhaseLobby {
 			return
 		}
-		if _, ok := words[msg.Category]; ok {
+		if isCategory(msg.Category) {
 			c.room.Category = msg.Category
 			s.broadcast(c.room, "Category changed.")
 		}
@@ -505,15 +507,28 @@ func cleanName(name string) string {
 }
 
 func categories() []string {
-	return []string{"Random", "Food", "Animals", "Places", "Movies", "Objects", "Sports", "School"}
+	return append([]string{"Random"}, wordCategories()...)
+}
+
+func wordCategories() []string {
+	return []string{"Food", "Animals", "Places", "Objects", "Sports", "School", "Nature", "Jobs", "Activities", "Fantasy"}
+}
+
+func isCategory(category string) bool {
+	if category == "Random" {
+		return true
+	}
+	_, ok := words[category]
+	return ok
 }
 
 func randomWord(category string) string {
-	list := words[category]
-	if len(list) == 0 {
-		list = words["Random"]
+	if _, ok := words[category]; !ok {
+		realCategories := wordCategories()
+		category = realCategories[chooseRandomInt(len(realCategories))]
 	}
-	return list[randomInt(len(list))]
+	list := words[category]
+	return list[chooseRandomInt(len(list))]
 }
 
 func randomID(n int) string {

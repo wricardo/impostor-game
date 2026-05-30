@@ -24,7 +24,7 @@ func TestStartRoundRandomizesStartingPlayer(t *testing.T) {
 	oldChoose := chooseRandomInt
 	defer func() { chooseRandomInt = oldChoose }()
 
-	calls := []int{2, 0} // first call picks starting player, second picks impostor from rotated order
+	calls := []int{0, 2, 0} // word, starting player, impostor from rotated order
 	chooseRandomInt = func(max int) int {
 		if len(calls) == 0 {
 			t.Fatalf("unexpected chooseRandomInt call with max %d", max)
@@ -38,6 +38,7 @@ func TestStartRoundRandomizesStartingPlayer(t *testing.T) {
 	}
 
 	room := testRoom()
+	room.Category = "Food"
 	(&Server{}).startRound(room)
 
 	wantOrder := []string{"p3", "p1", "p2"}
@@ -49,6 +50,44 @@ func TestStartRoundRandomizesStartingPlayer(t *testing.T) {
 	}
 	if room.TurnIndex != 0 || room.Order[room.TurnIndex] != "p3" {
 		t.Fatalf("first turn = %q at index %d, want p3 at index 0", room.Order[room.TurnIndex], room.TurnIndex)
+	}
+}
+
+func TestRandomWordSelectsFromARealCategory(t *testing.T) {
+	oldChoose := chooseRandomInt
+	defer func() { chooseRandomInt = oldChoose }()
+
+	calls := []int{1, 2} // Animals, then elephant
+	chooseRandomInt = func(max int) int {
+		if len(calls) == 0 {
+			t.Fatalf("unexpected chooseRandomInt call with max %d", max)
+		}
+		v := calls[0]
+		calls = calls[1:]
+		if v >= max {
+			t.Fatalf("test random value %d is outside max %d", v, max)
+		}
+		return v
+	}
+
+	if got := randomWord("Random"); got != "elephant" {
+		t.Fatalf("randomWord(Random) = %q, want elephant", got)
+	}
+	if _, ok := words["Random"]; ok {
+		t.Fatalf("Random should not have its own word list")
+	}
+}
+
+func TestRandomCategoryIsSelectable(t *testing.T) {
+	room := testRoom()
+	s := &Server{rooms: map[string]*Room{room.Code: room}, clients: map[*Client]bool{}}
+	host := &Client{id: "p1", room: room}
+
+	room.Category = "Food"
+	s.handleMessage(host, Message{Type: "setCategory", Category: "Random"})
+
+	if room.Category != "Random" {
+		t.Fatalf("room.Category = %q, want Random", room.Category)
 	}
 }
 

@@ -125,12 +125,15 @@ Possible categories:
 - Food
 - Animals
 - Places
-- Movies
 - Objects
 - Sports
 - School
+- Nature
+- Jobs
+- Activities
+- Fantasy
 
-For the first version, categories can be simple hardcoded word lists.
+For the first version, real categories can be simple hardcoded word lists with PG, kid-friendly words. Random chooses one of the real categories for the round.
 
 ### Rules
 
