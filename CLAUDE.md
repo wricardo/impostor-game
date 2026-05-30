@@ -24,13 +24,13 @@ Single-file Go server + single-file frontend. No frameworks, no build step.
 
 **State model:** `Server` holds a map of `Room`s and connected `Client`s under a single `sync.Mutex`. Every WebSocket message goes through `handleMessage`, which acquires the mutex and mutates room state, then calls `broadcast` to push updated view state to all clients in the room.
 
-**Game phases (in order):** `lobby → role → turns → discussion → voting → results`
+**Game phases (in order):** `lobby → role → turns → voting → results`
 
 Phase transitions:
 - `startGame` → role
 - all players `ready` → turns
-- all turns done → discussion
-- host `startVoting` → voting
+- players may send `draftVote` during turns to save/change a non-final guess
+- all turns done → voting
 - all votes cast → results
 - host `playAgain` → role (next round) or lobby (rounds exhausted)
 - host `backLobby` → lobby

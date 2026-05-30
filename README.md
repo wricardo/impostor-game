@@ -16,8 +16,8 @@ The game is designed to be easy for kids and adults to play at a party: no accou
 8. The impostor does **not** see the secret word. They only see `IMPOSTOR`.
 9. Players take turns saying one word related to the secret word.
 10. The impostor listens, guesses what the word might be, and tries to say something believable.
-11. After all turns, players discuss who they think the impostor is.
-12. Everyone votes.
+11. During turns, players may save a draft guess for who they think the impostor is.
+12. After all turns, everyone confirms/submits a final vote or votes now.
 13. The impostor is revealed.
 
 ## Winning
@@ -179,17 +179,15 @@ Everyone else sees:
 
 After speaking, the current player taps `Done`.
 
-### Discussion Screen
+### Voting During Turns
 
-After everyone has said one word, players discuss who they think the impostor is.
-
-The host can start voting when the group is ready.
+While turns are happening, each player can privately save a draft guess for who they think the impostor is. Draft guesses can be changed and do not count until submitted as final votes.
 
 ### Voting Screen
 
-Each player privately votes for who they think the impostor is.
+After the last turn, players go directly to voting. Players with a draft guess can confirm and submit it or change it first. Players without a draft guess see a Vote Now screen.
 
-After voting, they wait for everyone else.
+After submitting a final vote, they wait for everyone else.
 
 ### Results Screen
 
@@ -219,8 +217,8 @@ The host can then start another round or go back to the lobby.
 - Private role screen
 - Ready check before turns begin
 - Turn-based gameplay
-- Discussion phase
-- Private voting
+- Draft vote selection during turns
+- Private final voting with confirmation
 - Results reveal
 - Play again / back to lobby
 - Mobile-friendly high-fidelity UI
@@ -260,6 +258,30 @@ http://localhost:8080
 
 To test multiplayer locally, open the same URL in multiple browser tabs or on multiple devices connected to the same network.
 
+## Terminal UI and CLI
+
+Run the interactive Charmbracelet terminal UI against a running server:
+
+```bash
+go run . tui --server ws://localhost:8000/ws
+```
+
+Or start an embedded local server for terminal-only play:
+
+```bash
+go run . tui --local --port 8000
+```
+
+Scriptable non-interactive commands are also available:
+
+```bash
+go run . create --name Ana --json
+go run . join --room abc --name Bob --json
+go run . state --room abc --player-id PLAYER_ID --json
+go run . ready --room abc --player-id PLAYER_ID --json
+go run . vote --room abc --player-id PLAYER_ID --target-id TARGET_ID --json
+```
+
 ## UI Preview Mode
 
 The single-page frontend includes a static preview mode for quickly reviewing every screen without creating rooms or using multiple browser tabs.
@@ -281,8 +303,8 @@ Preview mode shows a developer toolbar with sample states for:
 - Role screen as impostor
 - Turn screen, current player
 - Turn screen, waiting player
-- Discussion
-- Voting before and after voting
+- Turn screen with draft vote
+- Voting now, confirm, and after voting
 - Results, players win
 - Results, impostor wins
 
@@ -309,7 +331,6 @@ go test ./...
 - Custom word lists
 - More than one impostor for large groups
 - Timer for turns
-- Timer for discussion
 - QR code for joining a room
 - Host can kick players from the lobby
 - Better reconnect support after refresh

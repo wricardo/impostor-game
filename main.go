@@ -22,22 +22,21 @@ const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
 type Phase string
 
 const (
-	PhaseLobby      Phase = "lobby"
-	PhaseRole       Phase = "role"
-	PhaseTurns      Phase = "turns"
-	PhaseDiscussion Phase = "discussion"
-	PhaseVoting     Phase = "voting"
-	PhaseResults    Phase = "results"
+	PhaseLobby   Phase = "lobby"
+	PhaseRole    Phase = "role"
+	PhaseTurns   Phase = "turns"
+	PhaseVoting  Phase = "voting"
+	PhaseResults Phase = "results"
 )
 
 type Player struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Host     bool   `json:"host"`
-	Ready    bool   `json:"ready"`
-	Voted    bool   `json:"voted"`
-	Online   bool   `json:"online"`
-	LastVote string `json:"-"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Host      bool   `json:"host"`
+	Voted     bool   `json:"voted"`
+	Online    bool   `json:"online"`
+	LastVote  string `json:"-"`
+	DraftVote string `json:"-"`
 }
 
 type Room struct {
@@ -94,9 +93,26 @@ var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { retu
 var chooseRandomInt = randomInt
 
 func main() {
-	s := &Server{rooms: map[string]*Room{}, clients: map[*Client]bool{}}
+	if err := runCLI(os.Args[1:]); err != nil {
+		log.Fatal(err)
+	}
+}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+func runServer(port string) error {
+	if port == "" {
+		port = os.Getenv("PORT")
+	}
+	if port == "" {
+		port = "8000"
+	}
+	log.Printf("Impostor Game running at http://localhost:%s", port)
+	return http.ListenAndServe(":"+port, newServerHandler())
+}
+
+func newServerHandler() http.Handler {
+	s := &Server{rooms: map[string]*Room{}, clients: map[*Client]bool{}}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
@@ -104,14 +120,8 @@ func main() {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.ServeFileFS(w, r, content, "index.html")
 	})
-	http.HandleFunc("/ws", s.handleWS)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8000"
-	}
-	log.Printf("Impostor Game running at http://localhost:%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	mux.HandleFunc("/ws", s.handleWS)
+	return mux
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
@@ -239,29 +249,21 @@ func (s *Server) handleMessage(c *Client, msg Message) {
 		s.broadcast(room, p.Name+" was removed.")
 
 	case "startGame":
-		if !s.isHost(c) || c.room.Phase != PhaseLobby || len(c.room.Players) < 3 {
+		if !s.isHost(c) {
 			return
 		}
-		room := c.room
-		room.RoundNumber = 1
-		s.startRound(room)
-		s.broadcast(room, "Game started.")
-
-	case "ready":
-		if c.room == nil || c.room.Phase != PhaseRole {
-			return
-		}
-		c.room.Players[c.id].Ready = true
-		all := true
-		for _, id := range c.room.Order {
-			if !c.room.Players[id].Ready {
-				all = false
+		if c.room.Phase == PhaseLobby {
+			if len(c.room.Players) < 3 {
+				return
 			}
-		}
-		if all {
+			room := c.room
+			room.RoundNumber = 1
+			s.startRound(room)
+			s.broadcast(room, "Game started.")
+		} else if c.room.Phase == PhaseRole {
 			c.room.Phase = PhaseTurns
+			s.broadcast(c.room, "")
 		}
-		s.broadcast(c.room, "")
 
 	case "doneTurn":
 		if c.room == nil || c.room.Phase != PhaseTurns || c.room.Order[c.room.TurnIndex] != c.id {
@@ -269,15 +271,19 @@ func (s *Server) handleMessage(c *Client, msg Message) {
 		}
 		c.room.TurnIndex++
 		if c.room.TurnIndex >= len(c.room.Order) {
-			c.room.Phase = PhaseDiscussion
+			c.room.Phase = PhaseVoting
 		}
 		s.broadcast(c.room, "")
 
-	case "startVoting":
-		if !s.isHost(c) || c.room.Phase != PhaseDiscussion {
+	case "draftVote":
+		if c.room == nil || c.room.Players[msg.TargetID] == nil {
 			return
 		}
-		c.room.Phase = PhaseVoting
+		p := c.room.Players[c.id]
+		if p == nil || (c.room.Phase != PhaseTurns && (c.room.Phase != PhaseVoting || p.Voted)) {
+			return
+		}
+		p.DraftVote = msg.TargetID
 		s.broadcast(c.room, "")
 
 	case "vote":
@@ -323,16 +329,16 @@ func (s *Server) handleMessage(c *Client, msg Message) {
 }
 
 func (s *Server) startRound(room *Room) {
-	room.Phase = PhaseTurns
+	room.Phase = PhaseRole
 	room.Word = randomWord(room.Category)
 	rotateStartingPlayer(room, chooseRandomInt(len(room.Order)))
 	room.ImpostorID = room.Order[chooseRandomInt(len(room.Order))]
 	room.TurnIndex = 0
 	room.Votes = map[string]string{}
 	for _, p := range room.Players {
-		p.Ready = false
 		p.Voted = false
 		p.LastVote = ""
+		p.DraftVote = ""
 	}
 }
 
@@ -343,9 +349,9 @@ func (s *Server) resetToLobby(room *Room) {
 	room.TurnIndex = 0
 	room.Votes = map[string]string{}
 	for _, p := range room.Players {
-		p.Ready = false
 		p.Voted = false
 		p.LastVote = ""
+		p.DraftVote = ""
 	}
 }
 
@@ -413,6 +419,7 @@ func (s *Server) viewFor(c *Client, room *Room, toast string) map[string]any {
 		"isImpostor":    room.ImpostorID == c.id,
 		"currentTurnId": currentTurnID,
 		"turnIndex":     room.TurnIndex,
+		"draftVote":     room.Players[c.id].DraftVote,
 		"impostorName":  playerName(room, room.ImpostorID),
 		"resultWord":    resultWord(room),
 		"playersWin":    playersWin(room),
@@ -534,7 +541,7 @@ func randomWord(category string) string {
 func randomID(n int) string {
 	b := make([]byte, n)
 	for i := range b {
-		b[i] = alphabet[randomInt(len(alphabet))]
+		b[i] = alphabet[chooseRandomInt(len(alphabet))]
 	}
 	return string(b)
 }

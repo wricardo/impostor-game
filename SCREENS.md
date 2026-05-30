@@ -233,40 +233,15 @@ Show the turn order:
 
 ---
 
-## 6. Discussion Screen
+## 6. Voting During Turns
 
-After everyone has said one word, players discuss who they think the impostor is.
-
-### Shows
-
-Title:
-
-> Discuss!
-
-Instruction:
-
-> Talk together and decide who you think the impostor is.
-
-Button:
-
-- `Start Voting`
-
-### Rules
-
-- The host can control when voting starts.
-- Keep this screen simple so the group can focus on talking.
-
----
-
-## 7. Voting Screen
-
-Each player votes privately for who they think the impostor is.
+While turns are happening, each player can privately save a draft guess for who they think the impostor is.
 
 ### Shows
 
-Title:
+Current guess section:
 
-> Who is the impostor?
+> Your current guess
 
 Player buttons:
 
@@ -275,14 +250,46 @@ Player buttons:
 - Carlos
 - Mia
 
-After voting, show:
+### Rules
 
-> Waiting for everyone else...
+- Draft guesses are optional.
+- Players can change their draft guess while turns continue.
+- Draft guesses do not count as final votes.
+
+---
+
+## 7. Final Voting Screen
+
+After the last turn, each player votes privately for who they think the impostor is.
+
+### Shows
+
+Title for players without a draft guess:
+
+> Vote now
+
+Title for players with a draft guess:
+
+> Confirm your vote
+
+Player buttons:
+
+- Ana
+- Bob
+- Carlos
+- Mia
+
+Players with a draft guess can submit that vote or change it first.
+
+After submitting a final vote, show:
+
+> Vote locked in. Waiting for everyone else...
 
 ### Rules
 
-- Each player gets one vote.
-- A player cannot change their vote in the first version.
+- Each player gets one final vote.
+- A player can change their draft guess until submitting.
+- A final submitted vote is locked.
 - Voting for yourself can be allowed for simplicity.
 
 ---
@@ -389,7 +396,6 @@ These are not required for the first version, but could improve the game later.
 - Custom word lists
 - More than one impostor for large groups
 - Timer for turns
-- Timer for discussion
 - QR code for joining a room
 - Host can kick players from the lobby
 - Rejoin support after refresh

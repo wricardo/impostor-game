@@ -146,6 +146,7 @@
     .hidden { display: none !important; }
     .vote-grid { display: grid; gap: 10px; }
     .vote-grid button { background: white; color: var(--ink); border: 1px solid var(--line); box-shadow: none; justify-content: flex-start; }
+    .vote-grid button.selected { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79,70,229,.14); background: #eef2ff; }
     .result-banner { border-radius: 24px; padding: 18px; text-align: center; background: #ecfdf5; color: #065f46; font-weight: 950; font-size: 1.5rem; }
     .result-banner.bad { background: #fff1f2; color: #be123c; }
     .small { font-size: .96rem; }
@@ -217,10 +218,10 @@ const previewStates = {
   lobbyPlayer: makePreviewState({ phase: 'lobby', isHost: false, playerId: 'p2', players: previewPlayers.map(p => ({...p, ready:false, voted:false})) }),
   roleWord: makePreviewState({ phase: 'role', secretWord: 'pizza', isImpostor: false, players: previewPlayers }),
   roleImpostor: makePreviewState({ phase: 'role', playerId: 'p3', secretWord: '', isImpostor: true, players: previewPlayers }),
-  turnMine: makePreviewState({ phase: 'turns', currentTurnId: 'p1', secretWord: 'pizza', isImpostor: false, players: previewPlayers }),
+  turnMine: makePreviewState({ phase: 'turns', currentTurnId: 'p1', secretWord: 'pizza', isImpostor: false, players: previewPlayers, draftVote: 'p3' }),
   turnWaiting: makePreviewState({ phase: 'turns', currentTurnId: 'p2', secretWord: 'pizza', isImpostor: false, players: previewPlayers }),
-  discussion: makePreviewState({ phase: 'discussion', players: previewPlayers }),
   votingOpen: makePreviewState({ phase: 'voting', players: previewPlayers.map(p => ({...p, voted:false})) }),
+  votingConfirm: makePreviewState({ phase: 'voting', draftVote: 'p3', players: previewPlayers.map(p => ({...p, voted:false})) }),
   votingDone: makePreviewState({ phase: 'voting', players: previewPlayers }),
   resultsPlayers: makePreviewState({ phase: 'results', playersWin: true, roundNumber: 2, roundLimit: 3 }),
   resultsImpostor: makePreviewState({ phase: 'results', playersWin: false, roundNumber: 3, roundLimit: 3 })
@@ -228,14 +229,14 @@ const previewStates = {
 const previewLabels = {
   home: 'Home', create: 'Create Room', join: 'Join Room', lobbyHost: 'Lobby · Host', lobbyPlayer: 'Lobby · Player',
   roleWord: 'Role · Word', roleImpostor: 'Role · Impostor', turnMine: 'Turn · My Turn', turnWaiting: 'Turn · Waiting',
-  discussion: 'Discussion', votingOpen: 'Voting · Open', votingDone: 'Voting · Voted', resultsPlayers: 'Results · Players Win', resultsImpostor: 'Results · Impostor Wins'
+  votingOpen: 'Voting · Vote Now', votingConfirm: 'Voting · Confirm', votingDone: 'Voting · Voted', resultsPlayers: 'Results · Players Win', resultsImpostor: 'Results · Impostor Wins'
 };
 
 function makePreviewState(overrides = {}) {
   return {
     type: 'state', toast: '', playerId: 'p1', roomCode: 'k3p', phase: 'lobby', category: 'Food', categories: previewCategories,
     roundLimit: 3, roundNumber: overrides.phase === 'lobby' ? 0 : 1, players: previewPlayers, isHost: true,
-    secretWord: 'pizza', isImpostor: false, currentTurnId: 'p1', turnIndex: 0, impostorName: 'Mia', resultWord: 'pizza',
+    secretWord: 'pizza', isImpostor: false, currentTurnId: 'p1', turnIndex: 0, draftVote: '', impostorName: 'Mia', resultWord: 'pizza',
     playersWin: true,
     voteSummary: [
       { voter: 'Ana', target: 'Mia' }, { voter: 'Bob', target: 'Mia' }, { voter: 'Mia', target: 'Ana' }, { voter: 'Leo', target: 'Mia' }
@@ -273,6 +274,17 @@ function previewSend(type, data = {}) {
   }
   if (type === 'setRounds') {
     state.roundLimit = data.rounds;
+    renderState();
+    return;
+  }
+  if (type === 'draftVote') {
+    state.draftVote = data.targetId;
+    renderState();
+    return;
+  }
+  if (type === 'vote') {
+    state.players = state.players.map(p => p.id === state.playerId ? {...p, voted: true} : p);
+    state.draftVote = data.targetId;
     renderState();
     return;
   }
@@ -449,7 +461,6 @@ function renderState() {
   if (state.phase === 'lobby') return renderLobby();
   if (state.phase === 'role') return renderRole();
   if (state.phase === 'turns') return renderTurns();
-  if (state.phase === 'discussion') return renderDiscussion();
   if (state.phase === 'voting') return renderVoting();
   if (state.phase === 'results') return renderResults();
 }
@@ -521,29 +532,30 @@ function renderTurns() {
     </details>
     ${myTurn ? '<button onclick="send(\'doneTurn\')">Done</button>' : '<button disabled>Waiting...</button>'}
     <div class="divider"></div>
+    <p><b>Your current guess</b></p>
+    <p class="small">Optional: pick who you think the impostor is. You can change this before submitting your final vote.</p>
+    ${voteButtons('draftVote', state.draftVote)}
+    <div class="divider"></div>
     <p><b>Turn order</b></p>
     <div class="players">${playersList(false, state.currentTurnId)}</div>
   `));
 }
 
-function renderDiscussion() {
-  setScreen(chrome('Discuss!', html`
-    <div class="center">
-      <div class="big-word">💬</div>
-      <p>Talk together and decide who you think the impostor is.</p>
-    </div>
-    ${state.isHost ? '<button onclick="send(\'startVoting\')">Start Voting</button>' : '<button disabled>Waiting for host to start voting...</button>'}
-  `));
-}
-
 function renderVoting() {
   const me = state.players.find(p => p.id === state.playerId);
-  setScreen(chrome('Who is the impostor?', html`
-    ${me?.voted ? html`<div class="center"><div class="big-word">✅</div><p><b>Vote locked in.</b><br/>Waiting for everyone else...</p></div>` : html`
-      <p>Tap the player you think is lying.</p>
-      <div class="vote-grid">
-        ${state.players.map(p => `<button onclick="send('vote', {targetId: '${p.id}'})">${escapeHtml(p.name)} ${p.id === state.playerId ? '(me)' : ''}</button>`).join('')}
-      </div>`}
+  const draftPlayer = state.players.find(p => p.id === state.draftVote);
+  setScreen(chrome(me?.voted ? 'Vote submitted' : (draftPlayer ? 'Confirm your vote' : 'Vote now'), html`
+    ${me?.voted ? html`<div class="center"><div class="big-word">✅</div><p><b>Vote locked in.</b><br/>Waiting for everyone else...</p></div>` : draftPlayer ? html`
+      <div class="center">
+        <p>You currently think the impostor is:</p>
+        <div class="big-word impostor">${escapeHtml(draftPlayer.name)}</div>
+      </div>
+      <button onclick="send('vote', {targetId: '${draftPlayer.id}'})">Submit Vote</button>
+      <div class="divider"></div>
+      <p><b>Change vote</b></p>
+      ${voteButtons('draftVote', state.draftVote)}` : html`
+      <p>Who do you think is the impostor?</p>
+      ${voteButtons('vote', '')}`}
     <div class="players">${playersList(true)}</div>
   `));
 }
@@ -566,6 +578,12 @@ function renderResults() {
       ${state.isHost ? `<button onclick="send('playAgain')">${state.roundNumber < state.roundLimit ? 'Next Round' : 'Finish Game'}</button><button class="secondary" onclick="send('backLobby')">Back to Lobby</button>` : '<button disabled>Waiting for host...</button>'}
     </div>
   `));
+}
+
+function voteButtons(action, selectedId = '') {
+  return html`<div class="vote-grid">
+    ${state.players.map(p => `<button class="${p.id === selectedId ? 'selected' : ''}" onclick="send('${action}', {targetId: '${p.id}'})">${escapeHtml(p.name)} ${p.id === state.playerId ? '(me)' : ''}</button>`).join('')}
+  </div>`;
 }
 
 function playersList(showStatus = false, activeId = '', allowRemove = false) {
