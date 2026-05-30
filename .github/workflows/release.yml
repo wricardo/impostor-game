@@ -28,3 +28,43 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          test -n "$EC2_HOST"
+          test -n "$EC2_SSH_KEY"
+          mkdir -p ~/.ssh
+          echo "$EC2_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -R "$EC2_HOST" 2>/dev/null || true
+          ssh-keyscan -T 10 -H "$EC2_HOST" > ~/.ssh/known_hosts
+          test -s ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy binary
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          ssh -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -i ~/.ssh/deploy_key \
+            ubuntu@"$EC2_HOST" "
+            set -e
+            URL=\"https://github.com/wricardo/impostor-game/releases/download/${TAG}/impostor-game_linux_amd64.tar.gz\"
+            cd /tmp
+            curl -fsSL \"\$URL\" | tar -xz
+            sudo systemctl stop impostor-game
+            sudo cp impostor-game /opt/impostor-game/impostor-game
+            sudo systemctl start impostor-game
+            systemctl is-active impostor-game
+            echo \"Deployed ${TAG}\"
+          "
