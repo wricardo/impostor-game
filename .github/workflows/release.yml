@@ -64,6 +64,7 @@ jobs:
             curl -fsSL \"\$URL\" | tar -xz
             sudo systemctl stop impostor-game
             sudo cp impostor-game /opt/impostor-game/impostor-game
+            sudo setcap 'cap_net_bind_service=+ep' /opt/impostor-game/impostor-game
             sudo systemctl start impostor-game
             systemctl is-active impostor-game
             echo \"Deployed ${TAG}\"
