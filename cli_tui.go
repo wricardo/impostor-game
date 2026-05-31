@@ -533,11 +533,6 @@ func (m tuiModel) renderPhase() string {
 	switch m.state.Phase {
 	case PhaseLobby:
 		return fmt.Sprintf("Lobby setup: %s · %d rounds", m.state.Category, m.state.RoundLimit)
-	case PhaseRole:
-		if m.state.IsImpostor {
-			return warnStyle.Render("You are the IMPOSTOR. Listen carefully and bluff!")
-		}
-		return goodStyle.Render("Your word: " + strings.ToUpper(m.state.SecretWord))
 	case PhaseTurns:
 		name := m.playerName(m.state.CurrentTurnID)
 		var line string
@@ -613,11 +608,6 @@ func (m tuiModel) gameHelp() string {
 	switch m.state.Phase {
 	case PhaseLobby:
 		return "[/] category · +/- rounds · s start · q quit"
-	case PhaseRole:
-		if m.state.IsHost {
-			return "s start turns · q quit"
-		}
-		return "wait for host · q quit"
 	case PhaseTurns:
 		return "d done turn · w peek word · q quit"
 	case PhaseVoting:

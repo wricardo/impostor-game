@@ -23,7 +23,6 @@ type Phase string
 
 const (
 	PhaseLobby   Phase = "lobby"
-	PhaseRole    Phase = "role"
 	PhaseTurns   Phase = "turns"
 	PhaseVoting  Phase = "voting"
 	PhaseResults Phase = "results"
@@ -260,9 +259,6 @@ func (s *Server) handleMessage(c *Client, msg Message) {
 			room.RoundNumber = 1
 			s.startRound(room)
 			s.broadcast(room, "Game started.")
-		} else if c.room.Phase == PhaseRole {
-			c.room.Phase = PhaseTurns
-			s.broadcast(c.room, "")
 		}
 
 	case "doneTurn":
@@ -329,7 +325,7 @@ func (s *Server) handleMessage(c *Client, msg Message) {
 }
 
 func (s *Server) startRound(room *Room) {
-	room.Phase = PhaseRole
+	room.Phase = PhaseTurns
 	room.Word = randomWord(room.Category)
 	rotateStartingPlayer(room, chooseRandomInt(len(room.Order)))
 	room.ImpostorID = room.Order[chooseRandomInt(len(room.Order))]
@@ -428,7 +424,7 @@ func (s *Server) viewFor(c *Client, room *Room, toast string) map[string]any {
 }
 
 func privateWord(c *Client, room *Room) string {
-	if (room.Phase == PhaseRole || room.Phase == PhaseTurns) && room.ImpostorID != c.id {
+	if room.Phase == PhaseTurns && room.ImpostorID != c.id {
 		return room.Word
 	}
 	return ""

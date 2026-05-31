@@ -204,20 +204,18 @@ if (isPreview) {
 }
 
 const previewPlayers = [
-  { id: 'p1', name: 'Ana', host: true, ready: true, voted: true, online: true },
-  { id: 'p2', name: 'Bob', host: false, ready: true, voted: true, online: true },
-  { id: 'p3', name: 'Mia', host: false, ready: false, voted: false, online: true },
-  { id: 'p4', name: 'Leo', host: false, ready: false, voted: false, online: true }
+  { id: 'p1', name: 'Ana', host: true, voted: true, online: true },
+  { id: 'p2', name: 'Bob', host: false, voted: true, online: true },
+  { id: 'p3', name: 'Mia', host: false, voted: false, online: true },
+  { id: 'p4', name: 'Leo', host: false, voted: false, online: true }
 ];
 const previewCategories = ['Random', 'Food', 'Animals', 'Places', 'Objects', 'Sports', 'School', 'Nature', 'Jobs', 'Activities', 'Fantasy'];
 const previewStates = {
   home: null,
   create: 'create',
   join: 'join',
-  lobbyHost: makePreviewState({ phase: 'lobby', isHost: true, players: previewPlayers.map(p => ({...p, ready:false, voted:false})) }),
-  lobbyPlayer: makePreviewState({ phase: 'lobby', isHost: false, playerId: 'p2', players: previewPlayers.map(p => ({...p, ready:false, voted:false})) }),
-  roleWord: makePreviewState({ phase: 'role', secretWord: 'pizza', isImpostor: false, players: previewPlayers }),
-  roleImpostor: makePreviewState({ phase: 'role', playerId: 'p3', secretWord: '', isImpostor: true, players: previewPlayers }),
+  lobbyHost: makePreviewState({ phase: 'lobby', isHost: true, players: previewPlayers.map(p => ({...p, voted:false})) }),
+  lobbyPlayer: makePreviewState({ phase: 'lobby', isHost: false, playerId: 'p2', players: previewPlayers.map(p => ({...p, voted:false})) }),
   turnMine: makePreviewState({ phase: 'turns', currentTurnId: 'p1', secretWord: 'pizza', isImpostor: false, players: previewPlayers, draftVote: 'p3' }),
   turnWaiting: makePreviewState({ phase: 'turns', currentTurnId: 'p2', secretWord: 'pizza', isImpostor: false, players: previewPlayers }),
   votingOpen: makePreviewState({ phase: 'voting', players: previewPlayers.map(p => ({...p, voted:false})) }),
@@ -459,7 +457,6 @@ function joinRoom() {
 function renderState() {
   if (!state) return renderHome();
   if (state.phase === 'lobby') return renderLobby();
-  if (state.phase === 'role') return renderRole();
   if (state.phase === 'turns') return renderTurns();
   if (state.phase === 'voting') return renderVoting();
   if (state.phase === 'results') return renderResults();
@@ -499,19 +496,6 @@ function renderLobby() {
       ${state.isHost ? `<button ${!canStart ? 'disabled' : ''} onclick="send('startGame')">Start Game</button>` : '<p class="center"><b>Waiting for the host to start...</b></p>'}
       <button class="secondary" onclick="leaveRoom()">Leave Room</button>
     </div>
-  `));
-}
-
-function renderRole() {
-  const me = state.players.find(p => p.id === state.playerId);
-  const ready = me && me.ready;
-  setScreen(chrome('', html`
-    <div class="center">
-      <p>Hide your phone. This is secret.</p>
-      ${state.isImpostor ? html`<p>You are the</p><div class="big-word impostor">IMPOSTOR</div><p>Listen carefully and bluff!</p>` : html`<p>Your word is</p><div class="big-word">${escapeHtml(state.secretWord)}</div><p>Say related words, but don't be too obvious.</p>`}
-    </div>
-    <button ${ready ? 'disabled' : ''} onclick="send('ready')">${ready ? 'Waiting for others...' : "I'm ready"}</button>
-    <div class="players">${playersList(true)}</div>
   `));
 }
 
@@ -592,7 +576,6 @@ function playersList(showStatus = false, activeId = '', allowRemove = false) {
       <div class="player-left"><span class="avatar">${escapeHtml(p.name[0] || '?').toUpperCase()}</span><span>${escapeHtml(p.name)}</span></div>
       <div class="row" style="flex:0; gap:6px">
         ${p.host ? '<span class="badge">HOST</span>' : ''}
-        ${showStatus && p.ready ? '<span class="badge">READY</span>' : ''}
         ${showStatus && p.voted ? '<span class="badge">VOTED</span>' : ''}
         ${!p.online ? '<span class="badge">OFFLINE</span>' : ''}
         ${allowRemove && !p.host && p.id !== state.playerId ? `<button class="danger" style="min-height:36px;border-radius:12px;padding:0 10px;font-size:.82rem;box-shadow:none;" onclick="removePlayer('${p.id}')">Remove</button>` : ''}
